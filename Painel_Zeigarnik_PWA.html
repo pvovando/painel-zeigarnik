@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel Zeigarnik</title>
+<meta name="theme-color" content="#2563eb">
+<style>
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f3f4f6;width:350px;max-width:350px;color:#111}
+.header{background:#2563eb;color:#fff;padding:12px;position:sticky;top:0}
+.section{padding:10px}.card{background:#fff;border-radius:8px;padding:10px;margin-bottom:8px;border-left:4px solid #2563eb}.late{border-left-color:#dc2626}
+input,select,button{width:100%;padding:8px;margin:4px 0;box-sizing:border-box}
+button{cursor:pointer}.stats{font-size:14px;background:#e5e7eb;padding:8px;border-radius:6px}.small{font-size:12px;color:#555}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5)}#box{background:#fff;margin:100px auto;padding:15px;width:280px;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="header"><b>🧠 Painel Zeigarnik</b><div class="small" style="color:#dbeafe">Memória externa de tarefas</div></div>
+<div class="section">
+<div class="stats" id="stats"></div>
+<input id="titulo" placeholder="Tarefa">
+<input id="acao" placeholder="Próxima ação">
+<input id="prazo" type="datetime-local">
+<select id="freq"><option value="15">Lembrar 15 min</option><option value="30">Lembrar 30 min</option><option value="60">Lembrar 60 min</option></select>
+<button onclick="addTask()">Adicionar tarefa</button>
+<h3>Abertas</h3><div id="tasks"></div>
+<h3>Concluídas</h3><div id="history"></div>
+</div>
+<div id="modal"><div id="box"><h3>Lembrete</h3><div id="msg"></div><br><button onclick="closeReminder()">OK</button></div></div>
+<script>
+let tasks=JSON.parse(localStorage.getItem('zg_tasks')||'[]');
+let history=JSON.parse(localStorage.getItem('zg_hist')||'[]');
+function save(){localStorage.setItem('zg_tasks',JSON.stringify(tasks));localStorage.setItem('zg_hist',JSON.stringify(history));}
+function addTask(){const t=titulo.value.trim(),a=acao.value.trim();if(!t||!a){alert('Preencha tarefa e próxima ação');return;}tasks.push({id:Date.now(),titulo:t,acao:a,prazo:prazo.value,freq:+freq.value,last:Date.now()});titulo.value='';acao.value='';prazo.value='';save();render();}
+function done(id){const i=tasks.findIndex(x=>x.id===id);if(i<0)return;history.unshift({titulo:tasks[i].titulo,data:new Date().toLocaleString('pt-BR')});tasks.splice(i,1);save();render();}
+function render(){tasks.innerHTML='';let late=0;window.tasks.forEach(t=>{let c='card';if(t.prazo&&new Date(t.prazo)<new Date()){c+=' late';late++;}tasks.innerHTML+=`<div class="${c}"><b>${t.titulo}</b><br><span class="small">${t.acao}</span><br><span class="small">${t.prazo?new Date(t.prazo).toLocaleString('pt-BR'):'Sem prazo'}</span><br><button onclick="done(${t.id})">Concluir</button></div>`});history.innerHTML='';window.history.forEach(h=>history.innerHTML+=`<div class="card"><b>${h.titulo}</b><br><span class="small">${h.data}</span></div>`);stats.innerHTML=`Abertas: ${window.tasks.length} | Atrasadas: ${late}`;}
+function remind(t){msg.innerHTML=`<b>${t.titulo}</b><br><br>Próxima ação:<br>${t.acao}`;modal.style.display='block';}
+function closeReminder(){modal.style.display='none';}
+setInterval(()=>{const now=Date.now();window.tasks.forEach(t=>{if(now-t.last>=t.freq*60000){remind(t);t.last=now;}});save();},30000);
+render();
+</script>
+</body></html>
